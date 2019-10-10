@@ -1,5 +1,16 @@
+/**
+  ******************************************************************************
+  * @file    drivers/bsp_usart.c 
+  * @author  YangLi
+  * @version V1.0
+  * @date    10/10/2019
+  * @brief   This file provides all the software functions related to usart drivers
+  ******************************************************************************
+  * @copy
+  *
+  */
+  
 #include "bsp_usart.h"
-
 
  /**
   * @brief  配置嵌套向量中断控制器NVIC

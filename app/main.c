@@ -1,21 +1,12 @@
 /**
   ******************************************************************************
-  * @file    IAP/src/main.c 
-  * @author  MCD Application Team
-  * @version V3.3.0
-  * @date    10/15/2010
+  * @file    app/main.c 
+  * @author  YangLi
+  * @version V1.0
+  * @date    10/10/2019
   * @brief   Main program body
   ******************************************************************************
   * @copy
-  *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
-  *
-  * <h2><center>&copy; COPYRIGHT 2010 STMicroelectronics</center></h2>
   */ 
 
 /** @addtogroup IAP
@@ -40,7 +31,7 @@ static void IAP_Init(void);
 uint8_t GetKey_Timeout(void)
 {
 	uint8_t key = 0;
-	uint32_t timeout = 514000;
+	uint32_t timeout = 102800;
 	/* Waiting for user input */
 	while (timeout--)
 	{
@@ -63,24 +54,26 @@ void SerialPutCharTimeout(uint8_t c)
 static int8_t waitIAP(void)
 {
 	uint8_t key = 0;
-	uint8_t timeout = 10;
+	uint8_t timeout = 30;
+	uint32_t cnt = 0;
 
+	LOG_INFO_APP("\r\nsend iap request(0xA5) per 100ms");
 	while(timeout--)
 	{
+		LOG_INFO_APP_1("\r\nsend 0xA5......");
 		SerialPutCharTimeout(0xA5);
-		SerialPutString("\r\nsend iap request per 500ms");
+		cnt ++;
 		
 		if( (key = GetKey_Timeout()) == 0x5A )
 		{
-		    SerialPutString("\r\nrec remote ack");
+		    LOG_INFO_APP_1("read: %#X, rec remote iap ack", key);
 			return 1;
 		}
 		else
-		    SerialPutString("\r\nno ack");
-		printf("%x", key);
+		    LOG_INFO_APP_1("read: %#X, no ack, cnt:%u,", key, cnt);
 	}
 	
-	SerialPutString("\r\n10s timeout, no ack ,jump to app");
+	LOG_INFO_APP("\r\n3s timeout, no ack ,jump to app");
 	return 0;
 }
 
@@ -93,47 +86,22 @@ static int8_t waitIAP(void)
   */
 int main(void)
 {
-	uint8_t key = 0;
-	
 	/* Flash unlock */
 	FLASH_Unlock();
 	IAP_Init();
-	SerialPutString("\r\nselect op, 1->flash, 2->run app");
-//	while(1)
-//	{
-//		printf("\r\nsend 0xA5");
-//		SerialPutCharTimeout(0xA5);
-//		delay_ms(500);
-//	}
-	
-//	while( 1 )
-//	{
-//	    if( (key = GetKey()) )
-//		{
-//		    printf("%c\r\n", key);
-//		}
-//	}
+	LOG_INFO_APP("\r\nselect op, 1->flash, 2->run app");
 	
 	if( waitIAP() )
 	{
-//		SerialPutString("\r\n======================================================================");
-//		SerialPutString("\r\n=              (C) COPYRIGHT 2010 STMicroelectronics                 =");
-//		SerialPutString("\r\n=                                                                    =");
-//		SerialPutString("\r\n=     In-Application Programming Application  (Version 3.3.0)        =");
-//		SerialPutString("\r\n=                                                                    =");
-//		SerialPutString("\r\n=                                   By MCD Application Team          =");
-//		SerialPutString("\r\n======================================================================");
-//		SerialPutString("\r\n\r\n");
-		SerialPutString("\r\nmain menu");
-
-		Main_Menu (); 
+		LOG_INFO_APP("\r\nenter iap main menu");
+		EnterIAP (); 
 	}
 	/* Keep the user application running */
 	else
 	{
 		/* Test if user code is programmed starting from address "ApplicationAddress" */
 		if (((*(__IO uint32_t*)ApplicationAddress) & 0x2FFE0000 ) == 0x20000000)
-		{ 
+		{
 			/* Jump to user application */
 			JumpAddress = *(__IO uint32_t*) (ApplicationAddress + 4);
 			Jump_To_Application = (pFunction) JumpAddress;

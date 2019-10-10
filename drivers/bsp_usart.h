@@ -1,3 +1,16 @@
+/**
+  ******************************************************************************
+  * @file    drivers/bsp_usart.h 
+  * @author  YangLi
+  * @version V1.0
+  * @date    10/10/2019
+  * @brief   This file provides all the software function headers of the bsp_usart.c 
+  *          file.
+  ******************************************************************************
+  * @copy
+  *
+  */
+
 #ifndef __USART_H
 #define	__USART_H
 
