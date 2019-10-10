@@ -1,21 +1,13 @@
 /**
   ******************************************************************************
-  * @file    IAP/src/common.c 
-  * @author  MCD Application Team
-  * @version V3.3.0
-  * @date    10/15/2010
+  * @file    app/common.c 
+  * @author  YangLi
+  * @version V1.0
+  * @date    10/10/2019
   * @brief   This file provides all the common functions.
   ******************************************************************************
   * @copy
   *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
-  *
-  * <h2><center>&copy; COPYRIGHT 2010 STMicroelectronics</center></h2>
   */ 
 
 /** @addtogroup IAP
@@ -314,7 +306,6 @@ uint32_t FLASH_PagesMask(__IO uint32_t Size)
     pagenumber = size / PAGE_SIZE;
   }
   return pagenumber;
-
 }
 
 /**
@@ -389,7 +380,7 @@ void FLASH_DisableWriteProtectionPages(void)
   * @param  None
   * @retval None
   */
-void Main_Menu(void)
+void EnterIAP(void)
 {
   uint8_t key = 0;
   
@@ -424,17 +415,12 @@ void Main_Menu(void)
 
   while (1)
   {
-//    SerialPutString("\r\n================== Main Menu ============================\r\n\n");
-//    SerialPutString("  Download Image To the STM32F10x Internal Flash ------- 1\r\n\n");
-//    SerialPutString("  Upload Image From the STM32F10x Internal Flash ------- 2\r\n\n");
-//    SerialPutString("  Execute The New Program ------------------------------ 3\r\n\n");
-	  SerialPutString("1-down, 3-jump to app");
+	SerialPutString("1-down, 3-jump to app");
     
     if(FlashProtection != 0)
     {
       SerialPutString("  Disable the write protection ------------------------- 4\r\n\n");
     }
-    
     SerialPutString("==========================================================\r\n\n");
     
     key = GetKey();
@@ -448,7 +434,7 @@ void Main_Menu(void)
     else if (key == 0x32)
     {
       /* Upload user application from the Flash */
-		SerialPutString("\r\nexec uploader");
+	  SerialPutString("\r\nexec uploader");
       SerialUpload();
     }
     else if (key == 0x33)

@@ -1,21 +1,13 @@
 /**
   ******************************************************************************
-  * @file    IAP/inc/common.h 
-  * @author  MCD Application Team
-  * @version V3.3.0
-  * @date    10/15/2010
+  * @file    app/common.h 
+  * @author  YangLi
+  * @version V1.0
+  * @date    10/10/2019
   * @brief   This file provides all the headers of the common functions.
   ******************************************************************************
   * @copy
   *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
-  *
-  * <h2><center>&copy; COPYRIGHT 2010 STMicroelectronics</center></h2>
   */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -71,6 +63,16 @@ typedef  void (*pFunction)(void);
 
 #define SerialPutString(x) Serial_PutString((uint8_t*)(x))
 
+#define __LOG_INFO_APP    1
+#define LOG_INFO_APP(fmt,arg...)      do{\
+                                          if(__LOG_INFO_APP)\
+											   printf("\r\n<<-INFO_APP->> "fmt" ",##arg);\
+                                          }while(0)
+#define LOG_INFO_APP_1(fmt,arg...)      do{\
+                                          if(__LOG_INFO_APP)\
+											   printf(""fmt" ",##arg);\
+                                          }while(0)
+
 /* Exported functions ------------------------------------------------------- */
 void Int2Str(uint8_t* str,int32_t intnum);
 uint32_t Str2Int(uint8_t *inputstr,int32_t *intnum);
@@ -82,7 +84,7 @@ void Serial_PutString(uint8_t *s);
 void GetInputString(uint8_t * buffP);
 uint32_t FLASH_PagesMask(__IO uint32_t Size);
 void FLASH_DisableWriteProtectionPages(void);
-void Main_Menu(void);
+void EnterIAP(void);
 void SerialDownload(void);
 void SerialUpload(void);
 void delay_ms( __IO uint32_t _T );
