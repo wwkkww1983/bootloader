@@ -415,7 +415,7 @@ void EnterIAP(void)
 
   while (1)
   {
-	SerialPutString("1-down, 3-jump to app");
+	SerialPutString("\r\n1-down, 3-jump to app");
     
     if(FlashProtection != 0)
     {
