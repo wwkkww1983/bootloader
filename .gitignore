@@ -1,0 +1,6 @@
+*.out
+*.files
+build
+Debug*
+*.kkk
+*.swp
