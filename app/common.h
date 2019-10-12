@@ -30,6 +30,15 @@ typedef  void (*pFunction)(void);
 
 #define ApplicationAddress    0x8003000
 
+#define HOST_CMD_QUERY_IAP 0xA5  // 查询是否执行IAP
+#define HOST_CMD_QUERY_IAP_ACK  0x5A
+
+#define HOST_CMD_EXEC_IAP  0xA6  // 告诉远程执行IAP
+#define HOST_CMD_EXEC_IAP_ACK  0x6A
+
+#define HOST_CMD_EXEC_APP  0xA7  // 告诉远程跳转到APP
+#define HOST_CMD_EXEC_APP_ACK  0x7A
+
 #if defined (STM32F10X_MD) || defined (STM32F10X_MD_VL)
  #define PAGE_SIZE                         (0x400)    /* 1 Kbyte */
  #define FLASH_SIZE                        (0x20000)  /* 128 KBytes */
@@ -64,6 +73,7 @@ typedef  void (*pFunction)(void);
 #define SerialPutString(x) Serial_PutString((uint8_t*)(x))
 
 #define __LOG_INFO_APP    1
+#define __LOG_ERR_APP     1
 #define LOG_INFO_APP(fmt,arg...)      do{\
                                           if(__LOG_INFO_APP)\
 											   printf("\r\n<<-INFO_APP->> "fmt" ",##arg);\
@@ -71,6 +81,10 @@ typedef  void (*pFunction)(void);
 #define LOG_INFO_APP_1(fmt,arg...)      do{\
                                           if(__LOG_INFO_APP)\
 											   printf(""fmt" ",##arg);\
+                                          }while(0)
+#define LOG_ERR_APP(fmt,arg...)      do{\
+                                          if(__LOG_INFO_APP)\
+											   printf("\r\n<<-ERR_APP->> "fmt" ",##arg);\
                                           }while(0)
 
 /* Exported functions ------------------------------------------------------- */
@@ -85,9 +99,12 @@ void GetInputString(uint8_t * buffP);
 uint32_t FLASH_PagesMask(__IO uint32_t Size);
 void FLASH_DisableWriteProtectionPages(void);
 void EnterIAP(void);
-void SerialDownload(void);
+int8_t SerialDownload(void);
 void SerialUpload(void);
 void delay_ms( __IO uint32_t _T );
+										  
+uint8_t GetKey_Timeout(void);										  
+int8_t waitHostAck(uint8_t cmd, uint8_t wanted_ack, uint32_t timeoutS, uint8_t *actual_ack);
 #endif  /* _COMMON_H */
 
 /*******************(C)COPYRIGHT 2010 STMicroelectronics *****END OF FILE******/
