@@ -26,21 +26,6 @@ extern uint32_t JumpAddress;
 /* Private function prototypes -----------------------------------------------*/
 static void IAP_Init(void);
 
-#define  MS_BASE    5140
-
-uint8_t GetKey_Timeout(void)
-{
-	uint8_t key = 0;
-	uint32_t timeout = 102800;
-	/* Waiting for user input */
-	while (timeout--)
-	{
-		if (SerialKeyPressed((uint8_t*)&key)) break;
-	}
-
-	return key;
-}
-
 void SerialPutCharTimeout(uint8_t c)
 {
 	uint32_t timeout = 514000;
@@ -49,32 +34,6 @@ void SerialPutCharTimeout(uint8_t c)
 	{
 		timeout --;
 	}
-}
-
-static int8_t waitIAP(void)
-{
-	uint8_t key = 0;
-	uint8_t timeout = 30;
-	uint32_t cnt = 0;
-
-	LOG_INFO_APP("\r\nsend iap request(0xA5) per 100ms");
-	while(timeout--)
-	{
-		LOG_INFO_APP_1("\r\nsend 0xA5......");
-		SerialPutCharTimeout(0xA5);
-		cnt ++;
-		
-		if( (key = GetKey_Timeout()) == 0x5A )
-		{
-		    LOG_INFO_APP_1("read: %#X, rec remote iap ack", key);
-			return 1;
-		}
-		else
-		    LOG_INFO_APP_1("read: %#X, no ack, cnt:%u,", key, cnt);
-	}
-	
-	LOG_INFO_APP("\r\n3s timeout, no ack ,jump to app");
-	return 0;
 }
 
 /* Private functions ---------------------------------------------------------*/
@@ -86,12 +45,14 @@ static int8_t waitIAP(void)
   */
 int main(void)
 {
+	uint8_t ack;
 	/* Flash unlock */
 	FLASH_Unlock();
 	IAP_Init();
 	LOG_INFO_APP("\r\nselect op, 1->flash, 2->run app");
 	
-	if( waitIAP() )
+	LOG_INFO_APP("\r\nquery is exec iap, timeout=3s");
+	if( waitHostAck( HOST_CMD_QUERY_IAP, HOST_CMD_QUERY_IAP_ACK, 3, &ack) )
 	{
 		LOG_INFO_APP("\r\nenter iap main menu");
 		EnterIAP (); 
@@ -99,6 +60,7 @@ int main(void)
 	/* Keep the user application running */
 	else
 	{
+		LOG_INFO_APP("\r\njump to app");
 		/* Test if user code is programmed starting from address "ApplicationAddress" */
 		if (((*(__IO uint32_t*)ApplicationAddress) & 0x2FFE0000 ) == 0x20000000)
 		{

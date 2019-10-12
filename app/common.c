@@ -224,6 +224,68 @@ uint8_t GetKey(void)
 	return key;
 }
 
+/*
+ * 获取远程数据，超时时间为100ms
+ */
+uint8_t GetKey_Timeout(void)
+{
+	uint8_t key = 0;
+	uint32_t timeout = 102800;  // 100ms timeout
+	/* Waiting for user input */
+	while (timeout--)
+	{
+		if (SerialKeyPressed((uint8_t*)&key)) break;
+	}
+
+	return key;
+}
+
+/*
+ * 向远程发送cmd指令，等待返回指令，超时为sTimeout
+ * timeoutS 单位是秒
+ */
+int8_t waitHostAck(uint8_t cmd, uint8_t wanted_ack, uint32_t timeoutS, uint8_t *actual_ack)
+{
+	uint8_t key = 0;
+	uint32_t timeout = timeoutS*1000/100;
+	uint32_t cnt = 0;
+
+	LOG_INFO_APP("\r\nsend cmd(%#X) per 100ms", cmd);
+	while(timeout--)
+	{
+		LOG_INFO_APP_1("\r\nsend %#X......", cmd);
+		SerialPutChar( cmd );
+		cnt ++;
+		
+		if( (key = GetKey_Timeout()) == wanted_ack )
+		{
+			*actual_ack = key;
+		    LOG_INFO_APP_1("read: %#X, rec remote iap ack", key);
+			return 1;
+		}
+		else if( key == HOST_CMD_EXEC_APP_ACK )
+		{
+			*actual_ack = key;
+		    LOG_INFO_APP("read: %#X, exec app", key);
+			return 0;
+		}
+		else if( key == HOST_CMD_EXEC_APP_ACK )
+		{
+			*actual_ack = key;
+		    LOG_INFO_APP("read: %#X, exec app", key);
+			return 0;
+		}
+		else
+		{
+			*actual_ack = key;
+		    LOG_INFO_APP_1("read: %#X, no ack, cnt:%u,", key, cnt);
+		}
+	}
+	
+	LOG_INFO_APP_1("\r\n%ds timeout", timeoutS);
+	return 0;
+}
+
 /**
   * @brief  Print a character on the HyperTerminal
   * @param  c: The character to be printed
@@ -382,10 +444,13 @@ void FLASH_DisableWriteProtectionPages(void)
   */
 void EnterIAP(void)
 {
-  uint8_t key = 0;
-  
-  /* Get the number of block (4 or 2 pages) from where the user program will be loaded */
-  BlockNbr = (FlashDestination - 0x08000000) >> 12;
+	uint8_t step = 0;
+	uint8_t key = 0;
+	int8_t ret = 0;
+	uint8_t ack;
+
+	/* Get the number of block (4 or 2 pages) from where the user program will be loaded */
+	BlockNbr = (FlashDestination - 0x08000000) >> 12;
 
   /* Compute the mask to test if the Flash memory, where the user program will be
      loaded, is write protected */
@@ -415,7 +480,7 @@ void EnterIAP(void)
 
   while (1)
   {
-	SerialPutString("\r\n1-down, 3-jump to app");
+//	SerialPutString("\r\n1-down, 3-jump to app");
     
     if(FlashProtection != 0)
     {
@@ -423,30 +488,80 @@ void EnterIAP(void)
     }
     SerialPutString("==========================================================\r\n\n");
     
-    key = GetKey();
+	// 告诉上位机当前的状态
+	if( step == 0 )  // 第一次进来，执行升级，5min超时
+	{
+		LOG_INFO_APP_1("\r\nrequest exec iap, timeout=5min(300s)");
+	    if( waitHostAck( HOST_CMD_EXEC_IAP, HOST_CMD_EXEC_IAP_ACK, 300, &ack ) )
+		{
+			key = 0x31;
+			step = 1;
+		}
+		else
+		{
+			if( ack == HOST_CMD_QUERY_IAP_ACK )
+			{
+			    continue;
+			}
+			else if( ack == HOST_CMD_EXEC_APP_ACK )
+			{
+			    key = 0x33;
+			}
+			else
+				key = 0x33;
+		}
+	}
+	else if( step == 1 )  // 升级完毕，跳转到app
+	{
+		key = 0x33;
+	}
+	
+//    key = GetKey();
 
-    if (key == 0x31)
-    {
-      /* Download user application in the Flash */
-	  SerialPutString("\r\nexec download");
-      SerialDownload();
-    }
-    else if (key == 0x32)
-    {
-      /* Upload user application from the Flash */
-	  SerialPutString("\r\nexec uploader");
-      SerialUpload();
-    }
+	if (key == 0x31)
+	{
+		/* Download user application in the Flash */
+		SerialPutString("\r\nexec iap download");
+		ret = SerialDownload();
+		switch( ret )
+		{
+		    case 0:
+				step = 1;
+				break;
+			case -1:
+				LOG_ERR_APP("ret=%d", ret);
+				break;
+			case -2:
+				LOG_ERR_APP("ret=%d", ret);
+				break;
+			case -3:
+				LOG_ERR_APP("ret=%d", ret);
+				break;
+			case -4:
+				LOG_ERR_APP("ret=%d", ret);
+				break;
+			default:
+				break;
+		}
+		
+		step = 1;
+	}
+	else if (key == 0x32)
+	{
+		/* Upload user application from the Flash */
+		SerialPutString("\r\nexec uploader");
+		SerialUpload();
+	}
     else if (key == 0x33)
     {
 		SerialPutString("\r\nexec jump to app");
-      JumpAddress = *(__IO uint32_t*) (ApplicationAddress + 4);
+		JumpAddress = *(__IO uint32_t*) (ApplicationAddress + 4);
 
-      /* Jump to user application */
-      Jump_To_Application = (pFunction) JumpAddress;
-      /* Initialize user application's Stack Pointer */
-      __set_MSP(*(__IO uint32_t*) ApplicationAddress);
-      Jump_To_Application();
+		/* Jump to user application */
+		Jump_To_Application = (pFunction) JumpAddress;
+		/* Initialize user application's Stack Pointer */
+		__set_MSP(*(__IO uint32_t*) ApplicationAddress);
+		Jump_To_Application();
     }
     else if ((key == 0x34) && (FlashProtection == 1))
     {
