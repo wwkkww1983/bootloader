@@ -139,7 +139,7 @@ int32_t Ymodem_Receive (uint8_t *buf)
   int32_t i, j, packet_length, session_done, file_done, packets_received, errors, session_begin, size = 0;
 
   /* Initialize FlashDestination variable */
-  FlashDestination = ApplicationAddress;
+  FlashDestination = DownloadAddress;
 
   for (session_done = 0, errors = 0, session_begin = 0; ;)
   {
@@ -201,7 +201,7 @@ int32_t Ymodem_Receive (uint8_t *buf)
                     NbrOfPage = FLASH_PagesMask(size);
 
                     /* Erase the FLASH pages */
-                    for (EraseCounter = 0; (EraseCounter < NbrOfPage) && (FLASHStatus == FLASH_COMPLETE); EraseCounter++)
+                    for(EraseCounter = 0; (EraseCounter < NbrOfPage) && (FLASHStatus == FLASH_COMPLETE); EraseCounter++)
                     {
                       FLASHStatus = FLASH_ErasePage(FlashDestination + (PageSize * EraseCounter));
                     }
@@ -222,7 +222,7 @@ int32_t Ymodem_Receive (uint8_t *buf)
                 {
                   memcpy(buf_ptr, packet_data + PACKET_HEADER, packet_length);
                   RamSource = (uint32_t)buf;
-                  for (j = 0;(j < packet_length) && (FlashDestination <  ApplicationAddress + size);j += 4)
+                  for (j = 0;(j < packet_length) && (FlashDestination <  DownloadAddress + size);j += 4)
                   {
                     /* Program the data received into STM32F10x Flash */
                     FLASH_ProgramWord(FlashDestination, *(uint32_t*)RamSource);
@@ -237,6 +237,7 @@ int32_t Ymodem_Receive (uint8_t *buf)
                     FlashDestination += 4;
                     RamSource += 4;
                   }
+
                   Send_Byte(ACK);
                 }
                 packets_received ++;

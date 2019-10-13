@@ -30,7 +30,78 @@ __IO uint32_t FlashProtection = 0;
 extern uint32_t FlashDestination;
 
 /* Private function prototypes -----------------------------------------------*/
+static uint16_t FLASH_ReadHalfWord(uint32_t address);
+static void FLASH_WriteMoreData(uint32_t startAddress,uint16_t *writeData,uint16_t countToWrite);
+static void FLASH_ReadMoreData(uint32_t startAddress,uint16_t *readData,uint16_t countToRead);
+static void UpdateApp(void);
 /* Private functions ---------------------------------------------------------*/
+static uint16_t FLASH_ReadHalfWord(uint32_t address)
+{
+  return *(__IO uint16_t*)address; 
+}
+
+static void FLASH_WriteMoreData(uint32_t startAddress,uint16_t *writeData,uint16_t countToWrite)
+{    
+	uint32_t offsetAddress=startAddress - FLASH_BASE;  
+	uint32_t sectorPosition=offsetAddress/PAGE_SIZE;  
+	uint32_t sectorStartAddress=sectorPosition*PAGE_SIZE+FLASH_BASE; 
+	uint16_t dataIndex;
+
+	if(startAddress<FLASH_BASE||((startAddress+countToWrite*2)>=(FLASH_BASE + PAGE_SIZE * FLASH_SIZE)))
+	{
+		SerialPutString("in flash write more data, first return");
+		return;
+	}
+	
+	FLASH_Unlock(); 
+
+	FLASH_ErasePage(startAddress);
+
+	for(dataIndex=0;dataIndex<countToWrite;dataIndex++)
+	{
+		FLASH_ProgramHalfWord(startAddress+dataIndex*2,writeData[dataIndex]);
+	}
+
+	FLASH_Lock();
+}
+
+static void FLASH_ReadMoreData(uint32_t startAddress,uint16_t *readData,uint16_t countToRead)
+{
+	uint16_t dataIndex;
+	for(dataIndex=0;dataIndex<countToRead;dataIndex++)
+	{
+		readData[dataIndex]=FLASH_ReadHalfWord(startAddress);
+		startAddress += 2;
+	}
+}
+
+static void UpdateApp(void)
+{
+	uint16_t buff_2k[1024];
+	uint16_t size = 2048;
+	uint32_t cnt = ApplicationRegionSize/2048; // 200k/2k = 100´Î
+	uint32_t i;
+	
+	uint32_t rd_addr = DownloadAddress;
+	uint32_t wr_addr = ApplicationAddress;
+	
+	for(i = 0; i < cnt; i++)
+	{
+		// read for down region
+		FLASH_ReadMoreData(rd_addr, buff_2k, size/2);
+		
+		// write to app region
+		FLASH_WriteMoreData(wr_addr, buff_2k, size/2);
+		
+		rd_addr += size;
+		wr_addr += size;
+	}
+}
+
+
+
+
+
 
 void delay_ms( __IO uint32_t _T )
 {
@@ -480,8 +551,6 @@ void EnterIAP(void)
 
   while (1)
   {
-//	SerialPutString("\r\n1-down, 3-jump to app");
-    
     if(FlashProtection != 0)
     {
       SerialPutString("  Disable the write protection ------------------------- 4\r\n\n");
@@ -515,8 +584,6 @@ void EnterIAP(void)
 	{
 		key = 0x33;
 	}
-	
-//    key = GetKey();
 
 	if (key == 0x31)
 	{
@@ -527,18 +594,25 @@ void EnterIAP(void)
 		{
 		    case 0:
 				step = 1;
+				LOG_INFO_APP("ret=%d, download success, now update app", ret);
+				UpdateApp();
+				LOG_INFO_APP("update app finished, now jump to app");
 				break;
 			case -1:
-				LOG_ERR_APP("ret=%d", ret);
+				LOG_ERR_APP("ret=%d, download failed, now jump to app", ret);
+				JumpToApp();
 				break;
 			case -2:
-				LOG_ERR_APP("ret=%d", ret);
+				LOG_ERR_APP("ret=%d, download failed, now jump to app", ret);
+				JumpToApp();
 				break;
 			case -3:
-				LOG_ERR_APP("ret=%d", ret);
+				LOG_ERR_APP("ret=%d, download failed, now jump to app", ret);
+				JumpToApp();
 				break;
 			case -4:
-				LOG_ERR_APP("ret=%d", ret);
+				LOG_ERR_APP("ret=%d, download failed, now jump to app", ret);
+				JumpToApp();
 				break;
 			default:
 				break;
@@ -554,14 +628,7 @@ void EnterIAP(void)
 	}
     else if (key == 0x33)
     {
-		SerialPutString("\r\nexec jump to app");
-		JumpAddress = *(__IO uint32_t*) (ApplicationAddress + 4);
-
-		/* Jump to user application */
-		Jump_To_Application = (pFunction) JumpAddress;
-		/* Initialize user application's Stack Pointer */
-		__set_MSP(*(__IO uint32_t*) ApplicationAddress);
-		Jump_To_Application();
+		JumpToApp();
     }
     else if ((key == 0x34) && (FlashProtection == 1))
     {
@@ -580,6 +647,21 @@ void EnterIAP(void)
       } 
     }
   }
+}
+
+void JumpToApp(void)
+{
+		LOG_INFO_APP("\r\njump to app");
+		/* Test if user code is programmed starting from address "ApplicationAddress" */
+		if (((*(__IO uint32_t*)ApplicationAddress) & 0x2FFE0000 ) == 0x20000000)
+		{
+			/* Jump to user application */
+			JumpAddress = *(__IO uint32_t*) (ApplicationAddress + 4);
+			Jump_To_Application = (pFunction) JumpAddress;
+			/* Initialize user application's Stack Pointer */
+			__set_MSP(*(__IO uint32_t*) ApplicationAddress);
+			Jump_To_Application();
+		}
 }
 
 /**

@@ -29,6 +29,12 @@ typedef  void (*pFunction)(void);
 #define CMD_STRING_SIZE       128
 
 #define ApplicationAddress    0x8003000
+#define DownloadAddress       0x8035000
+#define ReserveddAddress      0x8067000
+
+#define ApplicationRegionSize 0x32000  /* 200Kbyte */
+#define DownloadRegionSize    0x32000  /* 200Kbyte */
+#define ReservedRegionSize    0x19000  /* 100Kbyte */
 
 #define HOST_CMD_QUERY_IAP 0xA5  // ≤È—Ø «∑Ò÷¥––IAP
 #define HOST_CMD_QUERY_IAP_ACK  0x5A
@@ -99,6 +105,7 @@ void GetInputString(uint8_t * buffP);
 uint32_t FLASH_PagesMask(__IO uint32_t Size);
 void FLASH_DisableWriteProtectionPages(void);
 void EnterIAP(void);
+void JumpToApp(void);
 int8_t SerialDownload(void);
 void SerialUpload(void);
 void delay_ms( __IO uint32_t _T );

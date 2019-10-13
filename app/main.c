@@ -11,6 +11,14 @@
 
 /** @addtogroup IAP
   * @{
+ÇøÓò»®·Ö£º
+boot  app   download  reserved
+12K   200K  200k          100k
+
+bootloader region(12k)  : 0x8000000 - 0x8002FFF  
+				app region(200k): 0x8003000 - 0x8034FFF
+   download region(200k): 0x8035000 - 0x8066FFF
+	 reserved region(100k): 0x8067000 - 0x807FFFF
   */
 
 /* Includes ------------------------------------------------------------------*/
@@ -20,21 +28,9 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-extern pFunction Jump_To_Application;
-extern uint32_t JumpAddress;
 
 /* Private function prototypes -----------------------------------------------*/
 static void IAP_Init(void);
-
-void SerialPutCharTimeout(uint8_t c)
-{
-	uint32_t timeout = 514000;
-	USART_SendData(USART_1, c);
-	while ( ( USART_GetFlagStatus(USART_1, USART_FLAG_TXE) == RESET ) && ( timeout ) )
-	{
-		timeout --;
-	}
-}
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -46,11 +42,7 @@ void SerialPutCharTimeout(uint8_t c)
 int main(void)
 {
 	uint8_t ack;
-	/* Flash unlock */
-	FLASH_Unlock();
 	IAP_Init();
-	LOG_INFO_APP("\r\nselect op, 1->flash, 2->run app");
-	
 	LOG_INFO_APP("\r\nquery is exec iap, timeout=3s");
 	if( waitHostAck( HOST_CMD_QUERY_IAP, HOST_CMD_QUERY_IAP_ACK, 3, &ack) )
 	{
@@ -60,21 +52,11 @@ int main(void)
 	/* Keep the user application running */
 	else
 	{
-		LOG_INFO_APP("\r\njump to app");
-		/* Test if user code is programmed starting from address "ApplicationAddress" */
-		if (((*(__IO uint32_t*)ApplicationAddress) & 0x2FFE0000 ) == 0x20000000)
-		{
-			/* Jump to user application */
-			JumpAddress = *(__IO uint32_t*) (ApplicationAddress + 4);
-			Jump_To_Application = (pFunction) JumpAddress;
-			/* Initialize user application's Stack Pointer */
-			__set_MSP(*(__IO uint32_t*) ApplicationAddress);
-			Jump_To_Application();
-		}
-  }
+		JumpToApp();
+	}
 
-  while (1)
-  {}
+	while (1)
+	{}
 }
 
 /**
